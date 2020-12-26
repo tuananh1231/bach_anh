@@ -43,7 +43,7 @@ app.post('/doInsert', async (req, res)=>{
     let newProduct = {productName : nameInput, price: priceInput, color: colorInput};
     await dbo.collection("productDB").insertOne(newProduct);
     
-    res.redirect('/');
+    res.redirect('index');
 })
 
 app.get('/search', (req, res)=>{
@@ -66,7 +66,7 @@ app.get('/delete', async (req,res)=>{
     let dbo = client.db("ProductDB");
     await dbo.collection("productDB").deleteOne(condition)
     console.log(condition);
-    res.redirect('/');
+    res.redirect('index');
 })
 
 app.get('/edit',async (req,res)=>{
@@ -92,7 +92,7 @@ app.post('/doUpdate', async (req, res)=>{
     let dbo = client.db("ProductDB");
     await dbo.collection("productDB").updateOne(condition,newValue)
 
-    res.redirect('/');
+    res.redirect('index');
 })
 app.get('/register', (req,res)=>{
     res.render('register');
