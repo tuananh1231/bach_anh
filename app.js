@@ -1,7 +1,8 @@
 const express = require('express')
 const hbs = require('hbs');
 const session = require("express-session");
-
+var bodyParser = require('body-parser');
+var path = require('path');
 
 var MongoClient = require('mongodb').MongoClient
 
@@ -23,6 +24,14 @@ app.get('/index', async (req, res)=>{
     let dbo = client.db("ProductDB");
     let results = await dbo.collection("productDB").find({}).toArray();
     res.render('index', {model:results})
+
+    ////
+    if (request.session.loggedin) {
+		response.send('Welcome back, ' + request.session.name + '!');
+	} else {
+		response.send('Please login to view this page!');
+	}
+	response.end();
 })
 
 app.get('/insert', (req,res)=>{
@@ -110,28 +119,55 @@ app.post('/doRegister',async (req,res)=>{
     
     res.redirect('login');
 })
-
+//////////
+app.use(session({
+	secret: 'secret',
+	resave: true,
+	saveUninitialized: true
+}));
+app.use(bodyParser.urlencoded({extended : true}));
+app.use(bodyParser.json());
+//////////
 app.get('/login', (req,res)=>{
     res.render('login');
 })
 
-app.post('/doLogin', async (req,res)=>{
-    let nameInput = req.body.txtName;
-    let passInput = req.body.txtPass;
+app.post('/doLogin', async function(request, response) {
+	var username = request.body.txtName;
+	var password = request.body.txtPass;
+	if (username && password) {
+        let client = await MongoClient.connect(url);
+        let dbo = client.db("ProductDB");
 
-    let client = await MongoClient.connect(url);
-    let dbo = client.db("ProductDB");
-    let account = {name : nameInput, password: passInput};
-    await dbo.collection("account").findOne({name: nameInput, password: passInput});
-    if(!account){
-        res.end('User account or password incorrect');
-    }
-    else{
-        res.redirect('/index'); 
-    }
-    
-})
+        var query = { name: username, password: password };
+        dbo.collection("account").find(query).toArray(function(error, results, fields) {
+			if (results.length > 0) {
+				request.session.loggedin = true;
+				request.session.name = username;
+				response.redirect('index');
+			} else {
+				response.send('Incorrect Username and/or Password!');
+			}			
+			response.end();
+		});
+	} else {
+		response.send('Please enter Username and Password!');
+		response.end();
+	}
+});
 
+app.get('/logout',  function (req, res, next)  {
+    if (req.session) {
+      // delete session object
+      req.session.destroy(function (err) {
+        if (err) {
+          return next(err);
+        } else {
+          return res.redirect('/');
+        }
+      });
+    }
+  });
 
 var PORT = process.env.PORT || 3000
 app.listen(PORT)
